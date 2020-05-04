@@ -12,13 +12,13 @@ from pyqtgraph.Qt import QtCore, QtGui
 import numpy as np
 import pgwidgets as pgw
 from matplotlib import pyplot as plt
-
+from utils import make_random_colormap
 class MainW(QtGui.QMainWindow):
     def __init__(self, image=None):
         super(MainW, self).__init__()
 
         # Interpret image data as row-major
-        pg.setConfigOptions(imageAxisOrder="row-major")
+        #pg.setConfigOptions(imageAxisOrder="row-major")
         self.setGeometry(50, 50, 1200, 1000)
         self.setWindowTitle("pyGUITrack")
         self.cp_path = os.path.dirname(os.path.realpath(__file__))
@@ -29,72 +29,69 @@ class MainW(QtGui.QMainWindow):
         self.setCentralWidget(self.cwidget)
 
         self.win = pg.GraphicsLayoutWidget()
+        self.win.setMouseTracking(True)
         self.l0.addWidget(self.win, 0,3)
 
-        self.vb=pgw.ModifiedViewBox(parent=self,lockAspect=True,enableMouse=True,border=[100, 100, 100])
+        self.vb=pgw.ModifiedViewBox(parent=self,lockAspect=True,invertY=True,enableMenu=False,enableMouse=True,border=[100, 100, 100])
         self.win.addItem(self.vb)
         # Item for displaying image data
         self.img = pg.ImageItem(viewbox=self.vb)
         self.vb.addItem(self.img)
-        self.layer = pg.ImageItem(viewbox=self.vb)
-        self.vb.addItem(self.layer)
+        self.mask = pg.ImageItem(viewbox=self.vb)
+        self.vb.addItem(self.mask)
+        self.draw = pgw.ClickDrawableImageItem(viewbox=self.vb)
+#        self.draw.setLookupTable(np.array([[0,0,0,0],[255,0,0,255]]))
+        self.vb.addItem(self.draw)
 
         # Contrast/color control
         self.hist = pg.HistogramLUTItem()
-        self.hist.setImageItem(self.img)
         self.win.addItem(self.hist)
         self.hist.vb.setMouseEnabled(y=False) # makes user interaction a little easier
+        self.hist.setImageItem(self.img)
 
-        #set image to view
-        data=np.random.randint(100,size=(1000,500),dtype=np.int8)
-        data[300:500,200:250]=100
-        self.img.setImage(data)
-        self.hist.setLevels(data.min(), data.max())
-
-        mask=np.zeros(data.shape)
-        mask[20:50,100:200]=4
-        mask[90:100,100:200]=7
-        unique_indices=np.unique(mask)
-        mask2=np.zeros_like(mask,dtype=np.int16)
-        for j,i in enumerate(unique_indices):
-            if i!=0: mask2[mask==i]=j
-
-        self.colormap=(plt.get_cmap('gist_ncar')(np.linspace(0.0,.9,1000)) * 255).astype(np.uint8)
-        self.colormap_random=np.concatenate([[[255,255,255,0]],self.colormap])
-        self.colormap_random[1:,-1]=128
-        self.layer.setImage(mask2,lut=self.colormap_random)
-
+#        self.win.scene().sigMouseClicked.connect(lambda : print("ccckucj"))
+        self.colormap,self.colormap_random=make_random_colormap(plt.cm.gist_ncar,1000,128)
+        self.mask.setLookupTable(self.colormap_random)
+        self.draw.setLookupTable(self.colormap_random)
+        self.update_image()
+        self.update_mask()
         self.win.show()
         self.show()
 
+    def set_images(self,imgs):
+        assert imgs.ndim==3
+        self.imgarray=imgs
+    def set_masks(self,masks):
+        assert masks.ndim==3
+        self.maskarray=masks
 
-    def make_viewbox(self):
-        self.p0 = guiparts.ViewBoxNoRightDrag(
-            parent=self,
-            lockAspect=True,
-            name="plot1",
-            border=[100, 100, 100],
-            invertY=True
-        )
-        self.brush_size=3
-        self.win.addItem(self.p0, 0, 0)
-        self.p0.setMenuEnabled(False)
-        self.p0.setMouseEnabled(x=True, y=True)
-        self.img = pg.ImageItem(viewbox=self.p0, parent=self)
-        self.layer = guiparts.ImageDraw(viewbox=self.p0, parent=self)
-        self.layer.setLevels([0,255])
-        self.scale = pg.ImageItem(viewbox=self.p0, parent=self)
-        self.scale.setLevels([0,255])
-        self.p0.scene().contextMenuItem = self.p0
-        #self.p0.setMouseEnabled(x=False,y=False)
-        self.Ly,self.Lx = 512,512
-        self.p0.addItem(self.img)
-        self.p0.addItem(self.layer)
-        self.p0.addItem(self.scale)
+    def update_image(self,i=0,adjust_hist=True):
+        if hasattr(self,"imgarray"):
+            self.img.setImage(self.imgarray[i])
+            if adjust_hist:
+                self.hist.setLevels(self.imgarray.min(), self.imgarray.max())
+    def update_mask(self,i=0):
+        if hasattr(self,"maskarray"):
+            self.mask.setImage(self.maskarray[i])
+            self.draw.setImage(np.zeros(self.maskarray[i].shape,dtype=np.bool))
 
 ## Start Qt event loop unless running in interactive mode or using pyside.
 if __name__ == '__main__':
     import sys
+    data = np.random.randint(100, size=(10,1000, 500), dtype=np.int8)
+    data[300:500, 200:250] = 100
+
+    mask = np.zeros(data.shape)
+    mask[0,300:600, 100:200] = 4
+    mask[0,700:900, 300:900] = 7
+    unique_indices = np.unique(mask)
+    mask2 = np.zeros_like(mask, dtype=np.int16)
+    for j, i in enumerate(unique_indices):
+        if i != 0: mask2[mask == i] = j
     app = QtGui.QApplication(sys.argv)
     window=MainW()
+    window.set_images(data)
+    window.set_masks(mask2)
+    window.update_image()
+    window.update_mask()
     sys.exit(app.exec_())
