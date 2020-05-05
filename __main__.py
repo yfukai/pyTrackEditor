@@ -23,6 +23,8 @@ class MainW(QtGui.QMainWindow):
         self.setWindowTitle("pyGUITrack")
         self.cp_path = os.path.dirname(os.path.realpath(__file__))
 
+        self.colormap,self.colormap_random=make_random_colormap(plt.cm.gist_ncar,1000,128)
+
         self.cwidget = QtGui.QWidget(self)
         self.l0 = QtGui.QGridLayout()
         self.cwidget.setLayout(self.l0)
@@ -39,7 +41,8 @@ class MainW(QtGui.QMainWindow):
         self.vb.addItem(self.img)
         self.mask = pg.ImageItem(viewbox=self.vb)
         self.vb.addItem(self.mask)
-        self.draw = pgw.ClickDrawableImageItem(viewbox=self.vb)
+        self.draw = pgw.ClickDrawableImageItem(viewbox=self.vb,
+                            end_draw_callback=lambda poss : print("poss:",poss))
 #        self.draw.setLookupTable(np.array([[0,0,0,0],[255,0,0,255]]))
         self.vb.addItem(self.draw)
 
@@ -50,9 +53,7 @@ class MainW(QtGui.QMainWindow):
         self.hist.setImageItem(self.img)
 
 #        self.win.scene().sigMouseClicked.connect(lambda : print("ccckucj"))
-        self.colormap,self.colormap_random=make_random_colormap(plt.cm.gist_ncar,1000,128)
         self.mask.setLookupTable(self.colormap_random)
-        self.draw.setLookupTable(self.colormap_random)
         self.update_image()
         self.update_mask()
         self.win.show()
@@ -73,7 +74,7 @@ class MainW(QtGui.QMainWindow):
     def update_mask(self,i=0):
         if hasattr(self,"maskarray"):
             self.mask.setImage(self.maskarray[i])
-            self.draw.setImage(np.zeros(self.maskarray[i].shape,dtype=np.bool))
+            self.draw.clear(self.maskarray[i].shape)
 
 ## Start Qt event loop unless running in interactive mode or using pyside.
 if __name__ == '__main__':

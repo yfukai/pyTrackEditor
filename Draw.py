@@ -33,7 +33,7 @@ view.setRange(QtCore.QRectF(0, 0, 200, 200))
 
 ## start drawing with 3x3 brush
 kern = np.ones([3,3])
-img.setDrawKernel(kern, mask=kern, center=(1,1), mode='set')
+img.setDrawKernel(kern, mask=kern, center=(1,1), mode='setgtgt')
 img.setLevels([0, 1])
 
 ## Start Qt event loop unless running in interactive mode or using pyside.
