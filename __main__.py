@@ -13,6 +13,8 @@ import numpy as np
 import pgwidgets as pgw
 from matplotlib import pyplot as plt
 from utils import make_random_colormap
+from skimage import draw
+
 class MainW(QtGui.QMainWindow):
     def __init__(self, image=None):
         super(MainW, self).__init__()
@@ -29,9 +31,9 @@ class MainW(QtGui.QMainWindow):
         self.l0 = QtGui.QGridLayout()
         self.cwidget.setLayout(self.l0)
         self.setCentralWidget(self.cwidget)
-
         self.win = pg.GraphicsLayoutWidget()
-        self.win.setMouseTracking(True)
+        self.win.scene().sigMouseClicked.connect(self.plot_clicked)
+#        self.win.setMouseTracking(True)
         self.l0.addWidget(self.win, 0,3)
 
         self.vb=pgw.ModifiedViewBox(parent=self,lockAspect=True,invertY=True,enableMenu=False,enableMouse=True,border=[100, 100, 100])
@@ -41,9 +43,24 @@ class MainW(QtGui.QMainWindow):
         self.vb.addItem(self.img)
         self.mask = pg.ImageItem(viewbox=self.vb)
         self.vb.addItem(self.mask)
+        #self.mask.sig=lambda event: print(event)
+
+        class drawCallback:
+            def __init__(self,parent):
+                self.parent=parent
+            def __call__(self,poss):
+                poss=np.array(poss)
+                polyr,polyc=draw.polygon(poss[:,0],poss[:,1],shape=self.parent.maskarray.shape[1:])
+                existing_inds=np.unique(self.parent.maskarray)
+                existing_inds=existing_inds[existing_inds!=0]
+                new_ind=next(i for i,e in enumerate(sorted(existing_inds)+[None],1) if i!=e)
+                print(existing_inds,new_ind)
+                temporary_mask=np.zeros_like(self.parent.maskarray[0],dtype=np.bool)
+                temporary_mask[polyr,polyc]=True
+                self.parent.maskarray[0][np.logical_and(temporary_mask,self.parent.maskarray[0]==0)]=new_ind
+                self.parent.update_mask()
         self.draw = pgw.ClickDrawableImageItem(viewbox=self.vb,
-                            end_draw_callback=lambda poss : print("poss:",poss))
-#        self.draw.setLookupTable(np.array([[0,0,0,0],[255,0,0,255]]))
+                            end_draw_callback=drawCallback(self))
         self.vb.addItem(self.draw)
 
         # Contrast/color control
@@ -53,11 +70,23 @@ class MainW(QtGui.QMainWindow):
         self.hist.setImageItem(self.img)
 
 #        self.win.scene().sigMouseClicked.connect(lambda : print("ccckucj"))
-        self.mask.setLookupTable(self.colormap_random)
         self.update_image()
         self.update_mask()
         self.win.show()
         self.show()
+
+    def plot_clicked(self,event):
+        if event.button()==QtCore.Qt.LeftButton \
+            and event.modifiers() == QtCore.Qt.ControlModifier:
+            pos=self.vb.mapSceneToView(event.pos())
+            ix=np.round(pos.x()).astype(np.int)
+            iy=np.round(pos.y()).astype(np.int)
+            if 0 <= ix and ix < self.maskarray.shape[1] \
+                and 0 <= iy and iy < self.maskarray.shape[2] :
+                ind=self.maskarray[0,ix,iy]
+                if ind>0:
+                    self.maskarray[0,self.maskarray[0,:,:]==ind]=0
+                    self.update_mask()
 
     def set_images(self,imgs):
         assert imgs.ndim==3
@@ -74,6 +103,8 @@ class MainW(QtGui.QMainWindow):
     def update_mask(self,i=0):
         if hasattr(self,"maskarray"):
             self.mask.setImage(self.maskarray[i])
+            self.mask.setLookupTable(self.colormap_random)
+            self.mask.setLevels((0,1000))
             self.draw.clear(self.maskarray[i].shape)
 
 ## Start Qt event loop unless running in interactive mode or using pyside.

@@ -10,6 +10,7 @@ class ModifiedViewBox(pg.ViewBox):
         super().__init__(None, border, lockAspect, enableMouse, invertY, enableMenu, name, invertX)
         self.parent=parent
 
+
 class ClickDrawableImageItem(pg.ImageItem):
     def __init__(self,image=None,
                  kernel=np.ones((3,3),dtype=np.bool),
@@ -29,7 +30,6 @@ class ClickDrawableImageItem(pg.ImageItem):
     def clear(self,shape):
         self.setImage(np.zeros(shape,dtype=np.bool))
         self.setLevels([0,1])
-
 
     def hoverEvent(self, event):
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CrossCursor)
