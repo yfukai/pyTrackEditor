@@ -35,11 +35,23 @@ class MainW(QtGui.QMainWindow):
         self.setCentralWidget(self.cwidget)
         self.l0 = QtGui.QHBoxLayout()
         self.cwidget.setLayout(self.l0)
+
+        self.lleft = QtGui.QVBoxLayout()
         self.lright = QtGui.QVBoxLayout()
+        self.l0.addLayout(self.lleft)
         self.l0.addLayout(self.lright)
 
+        self.initImageItems(self.lright)
+
+        self.tslider=QtGui.QSlider(QtCore.Qt.Horizontal,self)
+        self.lright.addWidget(self.tslider)
+        self.tslider.valueChanged.connect(self.change_t)
+
+        self.initMenu()
+
+    def initImageItems(self,layout):
         self.win = pg.GraphicsLayoutWidget()
-        self.lright.addWidget(self.win,1)
+        layout.addWidget(self.win,1)
         self.win.scene().sigMouseClicked.connect(self.plot_clicked)
 
         self.vb=pgw.ModifiedViewBox(parent=self,lockAspect=True,invertY=True,enableMenu=False,enableMouse=True,border=[100, 100, 100])
@@ -58,12 +70,6 @@ class MainW(QtGui.QMainWindow):
         self.win.addItem(self.hist)
         self.hist.vb.setMouseEnabled(y=False)
         self.hist.setImageItem(self.img)
-
-        self.tslider=QtGui.QSlider(QtCore.Qt.Horizontal,self)
-        self.lright.addWidget(self.tslider)
-        self.tslider.valueChanged.connect(self.change_t)
-
-        self.initMenu()
 
     def initMenu(self):
         openImageAction=QtGui.QAction("&Open Image",self)
