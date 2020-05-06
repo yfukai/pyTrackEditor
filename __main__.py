@@ -12,8 +12,8 @@ from pyqtgraph.Qt import QtCore, QtGui
 import numpy as np
 import pgwidgets as pgw
 from matplotlib import pyplot as plt
-from utils import make_random_colormap,get_testdata
-from skimage import draw,io
+from utils import make_random_colormap,get_testdata,get_boundary
+from skimage import draw,io,segmentation
 
 class MainW(QtGui.QMainWindow):
     def __init__(self, image=None):
@@ -22,6 +22,7 @@ class MainW(QtGui.QMainWindow):
         self.cp_path = os.path.dirname(os.path.realpath(__file__))
         self.colormap,self.colormap_random=make_random_colormap(plt.cm.gist_ncar,1000,128)
         self.t_index=0
+        self.mask_alpha=100
         self.initUI()
         self.update_image()
         self.update_mask()
@@ -36,11 +37,12 @@ class MainW(QtGui.QMainWindow):
         self.l0 = QtGui.QHBoxLayout()
         self.cwidget.setLayout(self.l0)
 
-        self.lleft = QtGui.QVBoxLayout()
+        self.lleft = QtGui.QFormLayout()
         self.lright = QtGui.QVBoxLayout()
-        self.l0.addLayout(self.lleft)
-        self.l0.addLayout(self.lright)
+        self.l0.addLayout(self.lleft,stretch=0)
+        self.l0.addLayout(self.lright,stretch=1)
 
+        self.initControls(self.lleft)
         self.initImageItems(self.lright)
 
         self.tslider=QtGui.QSlider(QtCore.Qt.Horizontal,self)
@@ -48,6 +50,16 @@ class MainW(QtGui.QMainWindow):
         self.tslider.valueChanged.connect(self.change_t)
 
         self.initMenu()
+
+    def initControls(self,layout):
+        self.alphaslider=QtGui.QSlider(QtCore.Qt.Horizontal,self)
+        layout.addRow(QtGui.QLabel("mask alpha"),self.alphaslider)
+        self.alphaslider.valueChanged.connect(self.change_alpha)
+        self.alphaslider.setValue(self.mask_alpha)
+        self.maskcheckbox=QtGui.QCheckBox()
+        layout.addRow(QtGui.QLabel("display mask"),self.maskcheckbox)
+        self.boundarycheckbox=QtGui.QCheckBox()
+        layout.addRow(QtGui.QLabel("display boundary"),self.boundarycheckbox)
 
     def initImageItems(self,layout):
         self.win = pg.GraphicsLayoutWidget()
@@ -61,6 +73,8 @@ class MainW(QtGui.QMainWindow):
         self.vb.addItem(self.img)
         self.mask = pg.ImageItem(viewbox=self.vb)
         self.vb.addItem(self.mask)
+        self.mask_edge = pg.ImageItem(viewbox=self.vb)
+        self.vb.addItem(self.mask_edge)
         self.draw = pgw.ClickDrawableImageItem(viewbox=self.vb,
                             end_draw_callback=self.draw_completed)
         self.vb.addItem(self.draw)
@@ -128,6 +142,10 @@ class MainW(QtGui.QMainWindow):
         self.update_image()
         self.update_mask()
 
+    def change_alpha(self,event):
+        self.mask_alpha=self.alphaslider.value()
+        self.update_mask()
+
     def plot_clicked(self,event):
         if event.button()==QtCore.Qt.LeftButton \
             and event.modifiers() == QtCore.Qt.ControlModifier:
@@ -139,6 +157,7 @@ class MainW(QtGui.QMainWindow):
                 ind=self.maskarray[self.t_index,ix,iy]
                 if ind>0:
                     self.maskarray[self.t_index,self.maskarray[self.t_index,:,:]==ind]=0
+                    self.update_mask_edge(self.t_index)
                     self.update_mask()
 
     def draw_completed(self,poss):
@@ -151,7 +170,9 @@ class MainW(QtGui.QMainWindow):
         temporary_mask=np.zeros_like(self.maskarray[self.t_index],dtype=np.bool)
         temporary_mask[polyr,polyc]=True
         self.maskarray[self.t_index][np.logical_and(temporary_mask,self.maskarray[self.t_index]==0)]=new_ind
+        self.update_mask_edge(self.t_index)
         self.update_mask()
+
 
     def set_images(self,imgs):
         if imgs.ndim==2:
@@ -173,10 +194,21 @@ class MainW(QtGui.QMainWindow):
         assert hasattr(self,"imgarray")
         assert all(np.array(self.imgarray.shape)==np.array(masks.shape))
         self.maskarray=masks
+        self.update_mask_edge()
+
+    def update_mask_edge(self,t_index=None):
+        if not hasattr(self,"maskarray_edge"):
+            self.maskarray_edge=np.zeros_like(self.maskarray,dtype=np.bool)
+        if t_index is None:
+            self.maskarray_edge=np.array([segmentation.find_boundaries(self.maskarray[ti],mode="inner")\
+                                          for ti in range(self.t_index_max)])
+        else:
+            self.maskarray_edge[t_index]=segmentation.find_boundaries(self.maskarray[t_index],mode="inner")
 
     def clear_masks(self):
         if hasattr(self,"imgarray"):
             self.maskarray=np.zeros_like(self.imgarray,dtype=np.uint16)
+            self.maskarray_edge=np.zeros_like(self.maskarray,dtype=np.bool)
 
     def update_image(self,adjust_hist=True):
         if hasattr(self,"imgarray"):
@@ -187,8 +219,13 @@ class MainW(QtGui.QMainWindow):
     def update_mask(self,i=0):
         if hasattr(self,"maskarray"):
             self.mask.setImage(self.maskarray[self.t_index])
+            self.colormap_random[1:,3]=self.mask_alpha
             self.mask.setLookupTable(self.colormap_random)
             self.mask.setLevels((0,1000))
+            
+            self.mask_edge.setImage(self.maskarray_edge[self.t_index])
+            self.mask_edge.setLookupTable([[0,0,0,0],[255,255,255,255]])
+            self.mask_edge.setLevels((0,1))
             self.draw.clear(self.maskarray[self.t_index].shape)
 
     def keyPressEvent(self,event):
