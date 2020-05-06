@@ -59,7 +59,12 @@ class ClickDrawableImageItem(pg.ImageItem):
                 self.poss=[]
                 self.poss.append([event.pos().x(),event.pos().y()])
     
+    def mouseDragEvent(self, ev):
+        ev.ignore()
+        return
+
     def endDraw(self):
-        self.drawing=False
-        if not self.end_draw_callback is None:
-            self.end_draw_callback(self.poss)
+        if self.drawing:
+            self.drawing=False
+            if not self.end_draw_callback is None:
+                self.end_draw_callback(self.poss)
