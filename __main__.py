@@ -12,8 +12,8 @@ from pyqtgraph.Qt import QtCore, QtGui
 import numpy as np
 import pgwidgets as pgw
 from matplotlib import pyplot as plt
-from utils import make_random_colormap
-from skimage import draw
+from utils import make_random_colormap,get_testdata
+from skimage import draw,io
 
 class MainW(QtGui.QMainWindow):
     def __init__(self, image=None):
@@ -21,6 +21,7 @@ class MainW(QtGui.QMainWindow):
 
         self.cp_path = os.path.dirname(os.path.realpath(__file__))
         self.colormap,self.colormap_random=make_random_colormap(plt.cm.gist_ncar,1000,128)
+        self.t_index=0
         self.initUI()
         self.update_image()
         self.update_mask()
@@ -62,6 +63,43 @@ class MainW(QtGui.QMainWindow):
         self.lright.addWidget(self.tslider)
         self.tslider.valueChanged.connect(self.change_t)
 
+        self.initMenu()
+
+    def initMenu(self):
+        openImageAction=QtGui.QAction("&Open Image",self)
+        openImageAction.setShortcut("Ctrl+O")
+        openImageAction.setStatusTip("Open image (T x X x Y tiff)")
+        openImageAction.triggered.connect(self.openImage)
+        openMaskAction=QtGui.QAction("&Open Mask",self)
+        openMaskAction.setShortcut("Ctrl+Shift+O")
+        openMaskAction.setStatusTip("Open mask (T x X x Y tiff)")
+        openMaskAction.triggered.connect(self.openMask)
+        menubar=self.menuBar()
+        fileMenu = menubar.addMenu('&File')
+        fileMenu.addAction(openImageAction)
+        fileMenu.addAction(openMaskAction)
+#        fileMenu.addAction(saveFile)
+
+    def openImage(self):
+        fname = pg.FileDialog.getOpenFileName(self, 'Open image TIFF','',"Tiff Image file (*.tiff)")
+        if fname[0]!="":
+            imgs=io.imread(fname[0])
+            try:
+                self.set_images(imgs)
+            except Exception as e:
+                raise e
+            self.update_image()
+
+    def openMask(self):
+        fname = pg.FileDialog.getOpenFileName(self, 'Open mask TIFF','',"Tiff Mask file (*.tiff)")
+        if fname[0]!="":
+            masks=io.imread(fname[0])
+            try:
+                self.set_masks(masks)
+            except Exception as e:
+                raise e
+            self.update_mask()
+
     def change_t(self,event):
         self.t_index=self.tslider.value()
         self.draw.endDraw()
@@ -94,24 +132,30 @@ class MainW(QtGui.QMainWindow):
         self.update_mask()
 
     def set_images(self,imgs):
-        assert imgs.ndim==3
-        print(imgs.shape)
-        self.imgarray=imgs
+        if imgs.ndim==2:
+            self.imgarray=imgs[np.nexaxis,:,:]
+        if imgs.ndim==3:
+            self.imgarray=imgs
+        else:
+            raise NotImplementedError("currently supported image dimension is 2 or 3")
+        self.t_index=0
         self.t_index_max=imgs.shape[0]-1
         self.tslider.setTickInterval(1)
         self.tslider.setMinimum(0)
         self.tslider.setMaximum(self.t_index_max)
-        self.t_index=0
 
     def set_masks(self,masks):
-        assert masks.ndim==3
+        if masks.ndim==2:
+            self.imgarray=masks[np.nexaxis,:,:]
+        if masks.ndim==3:
+            self.imgarray=masks
         assert hasattr(self,"imgarray")
         assert all(np.array(self.imgarray.shape)==np.array(masks.shape))
         self.maskarray=masks
 
     def update_image(self,adjust_hist=True):
         if hasattr(self,"imgarray"):
-            self.img.setImage(self.imgarray[self.t_index])
+            self.img.setImage(self.imgarray[self.t_index],autoLevels=False)
             if adjust_hist:
                 self.hist.setLevels(self.imgarray.min(), self.imgarray.max())
 
@@ -119,7 +163,7 @@ class MainW(QtGui.QMainWindow):
         if hasattr(self,"maskarray"):
             self.mask.setImage(self.maskarray[self.t_index])
             self.mask.setLookupTable(self.colormap_random)
-            self.mask.setLevels((0,self.colormap_random.shape[0]))
+            self.mask.setLevels((0,1000))
             self.draw.clear(self.maskarray[self.t_index].shape)
 
     def keyPressEvent(self,event):
@@ -142,22 +186,11 @@ class MainW(QtGui.QMainWindow):
 ## Start Qt event loop unless running in interactive mode or using pyside.
 if __name__ == '__main__':
     import sys
-    data = np.random.randint(100, size=(10,1000, 500), dtype=np.int8)
-    data[300:500, 200:250] = 100
-
-    mask = np.zeros(data.shape)
-    mask[0,300:600, 100:200] = 4
-    mask[0,700:900, 300:900] = 7
-    mask[1:,100:600, 100:200] = 4
-    mask[1:,200:900, 300:900] = 7
-    unique_indices = np.unique(mask)
-    mask2 = np.zeros_like(mask, dtype=np.int16)
-    for j, i in enumerate(unique_indices):
-        if i != 0: mask2[mask == i] = j
     app = QtGui.QApplication(sys.argv)
     window=MainW()
+    data,mask2=get_testdata()
     window.set_images(data)
-    window.set_masks(mask2)
+#    window.set_masks(mask2)
     window.update_image()
     window.update_mask()
     sys.exit(app.exec_())
