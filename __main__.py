@@ -70,15 +70,22 @@ class MainW(QtGui.QMainWindow):
         openImageAction.setShortcut("Ctrl+O")
         openImageAction.setStatusTip("Open image (T x X x Y tiff)")
         openImageAction.triggered.connect(self.openImage)
+
         openMaskAction=QtGui.QAction("&Open Mask",self)
         openMaskAction.setShortcut("Ctrl+Shift+O")
         openMaskAction.setStatusTip("Open mask (T x X x Y tiff)")
         openMaskAction.triggered.connect(self.openMask)
+
+        saveMaskAction=QtGui.QAction("&Save Mask",self)
+        saveMaskAction.setShortcut("Ctrl+S")
+        saveMaskAction.setStatusTip("Save mask to TIFF")
+        saveMaskAction.triggered.connect(self.saveMask)
+
         menubar=self.menuBar()
         fileMenu = menubar.addMenu('&File')
         fileMenu.addAction(openImageAction)
         fileMenu.addAction(openMaskAction)
-#        fileMenu.addAction(saveFile)
+        fileMenu.addAction(saveMaskAction)
 
     def openImage(self):
         fname = pg.FileDialog.getOpenFileName(self, 'Open image TIFF','',"Tiff Image file (*.tiff)")
@@ -86,9 +93,12 @@ class MainW(QtGui.QMainWindow):
             imgs=io.imread(fname[0])
             try:
                 self.set_images(imgs)
+                self.img_fname=fname[0]
             except Exception as e:
-                raise e
+                raise e 
             self.update_image()
+            self.clear_masks()
+            self.update_mask()
 
     def openMask(self):
         fname = pg.FileDialog.getOpenFileName(self, 'Open mask TIFF','',"Tiff Mask file (*.tiff)")
@@ -96,9 +106,15 @@ class MainW(QtGui.QMainWindow):
             masks=io.imread(fname[0])
             try:
                 self.set_masks(masks)
+                self.mask_fname=fname[0]
             except Exception as e:
                 raise e
             self.update_mask()
+
+    def saveMask(self):
+        if hasattr(self,"img_fname") and hasattr(self,"maskarray"):
+            maskname=os.path.splitext(self.img_fname)[0]+"_masks.tif"
+            io.imsave(maskname,self.maskarray)
 
     def change_t(self,event):
         self.t_index=self.tslider.value()
@@ -138,7 +154,6 @@ class MainW(QtGui.QMainWindow):
             self.imgarray=imgs
         else:
             raise NotImplementedError("currently supported image dimension is 2 or 3")
-        self.t_index=0
         self.t_index_max=imgs.shape[0]-1
         self.tslider.setTickInterval(1)
         self.tslider.setMinimum(0)
@@ -146,12 +161,16 @@ class MainW(QtGui.QMainWindow):
 
     def set_masks(self,masks):
         if masks.ndim==2:
-            self.imgarray=masks[np.nexaxis,:,:]
+            self.maskarray=masks[np.nexaxis,:,:]
         if masks.ndim==3:
-            self.imgarray=masks
+            self.maskarray=masks
         assert hasattr(self,"imgarray")
         assert all(np.array(self.imgarray.shape)==np.array(masks.shape))
         self.maskarray=masks
+
+    def clear_masks(self):
+        if hasattr(self,"imgarray"):
+            self.maskarray=np.zeros_like(self.imgarray,dtype=np.uint16)
 
     def update_image(self,adjust_hist=True):
         if hasattr(self,"imgarray"):
@@ -190,7 +209,7 @@ if __name__ == '__main__':
     window=MainW()
     data,mask2=get_testdata()
     window.set_images(data)
-#    window.set_masks(mask2)
+    window.set_masks(mask2)
     window.update_image()
     window.update_mask()
     sys.exit(app.exec_())
