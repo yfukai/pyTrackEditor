@@ -12,7 +12,7 @@ from pyqtgraph.Qt import QtCore, QtGui
 import numpy as np
 import pgwidgets as pgw
 from matplotlib import pyplot as plt
-from utils import make_random_colormap,get_testdata,get_boundary
+from utils import make_random_colormap,get_testdata
 from skimage import draw,io,segmentation
 
 class MainW(QtGui.QMainWindow):
@@ -56,10 +56,14 @@ class MainW(QtGui.QMainWindow):
         layout.addRow(QtGui.QLabel("mask alpha"),self.alphaslider)
         self.alphaslider.valueChanged.connect(self.change_alpha)
         self.alphaslider.setValue(self.mask_alpha)
-        self.maskcheckbox=QtGui.QCheckBox()
-        layout.addRow(QtGui.QLabel("display mask"),self.maskcheckbox)
-        self.boundarycheckbox=QtGui.QCheckBox()
-        layout.addRow(QtGui.QLabel("display boundary"),self.boundarycheckbox)
+        
+#        self.maskcheckbox=QtGui.QCheckBox()
+#        layout.addRow(QtGui.QLabel("display mask"),self.maskcheckbox)
+#        self.maskcheckbox.stateChanged.connect(self.switch_mask)
+#        self.maskcheckbox.setChecked(True)
+#        
+#        self.boundarycheckbox=QtGui.QCheckBox()
+#        layout.addRow(QtGui.QLabel("display boundary"),self.boundarycheckbox)
 
     def initImageItems(self,layout):
         self.win = pg.GraphicsLayoutWidget()
@@ -146,10 +150,20 @@ class MainW(QtGui.QMainWindow):
         self.mask_alpha=self.alphaslider.value()
         self.update_mask()
 
+#    def switch_mask(self):
+#        if self.maskcheckbox.isChecked() and self..isChecked():
+#            self.mask.show()
+#        else:
+#            self.mask.hide()
+#            self.win.removeItem(self.mask)
+
     def plot_clicked(self,event):
         if event.button()==QtCore.Qt.LeftButton \
             and event.modifiers() == QtCore.Qt.ControlModifier:
-            pos=self.vb.mapSceneToView(event.pos())
+            try: 
+                pos=self.vb.mapSceneToView(event.pos())
+            except AttributeError:
+                return
             ix=np.round(pos.x()).astype(np.int)
             iy=np.round(pos.y()).astype(np.int)
             if 0 <= ix and ix < self.maskarray.shape[1] \
