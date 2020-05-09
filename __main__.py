@@ -215,7 +215,7 @@ class MainW(QtGui.QMainWindow):
             self.maskarray_edge=np.zeros_like(self.maskarray,dtype=np.bool)
         if t_index is None:
             self.maskarray_edge=np.array([segmentation.find_boundaries(self.maskarray[ti],mode="inner")\
-                                          for ti in range(self.t_index_max)])
+                                          for ti in range(self.t_index_max+1)])
         else:
             self.maskarray_edge[t_index]=segmentation.find_boundaries(self.maskarray[t_index],mode="inner")
 
