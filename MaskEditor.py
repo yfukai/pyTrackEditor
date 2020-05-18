@@ -175,10 +175,8 @@ class MaskEditor(QtGui.QMainWindow):
                 self.vb.removeItem(self.maskimg)
 
     def switch_boundary(self):
-        print("boundary toggle")
         if hasattr(self,"vb") and not self.mask_boundary is None:
             if self.boundarycheckbox.isChecked():
-                print("boundary toggle")
                 self.vb.addItem(self.mask_boundary)
             else:
                 self.vb.removeItem(self.mask_boundary)
@@ -191,7 +189,6 @@ class MaskEditor(QtGui.QMainWindow):
         ix=np.round(pos.x()).astype(np.int)
         iy=np.round(pos.y()).astype(np.int)
         ix,iy=self.convertPos(ix,iy)
-        print(ix,iy)
         if 0 <= ix and ix < self.maskarray.shape[1] \
            and 0 <= iy and iy < self.maskarray.shape[2] :
             return self.maskarray[self.t_index,ix,iy]
@@ -236,7 +233,6 @@ class MaskEditor(QtGui.QMainWindow):
                           [0,self.imgarray.shape[2]]]
         else:
             self.roi=roi
-        print(self.roi)
 
     def convertPos(self,ix,iy):
         return ix+self.roi[0][0],iy+self.roi[1][0]
