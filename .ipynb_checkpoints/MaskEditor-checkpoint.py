@@ -24,7 +24,7 @@ class MaskEditor(QtGui.QMainWindow):
 
         self.img=None
         self.maskimg=None
-        self.mask_bonudary=None
+        self.mask_boundary=None
         self.draw=None
         self.vb=None
         self.tslider=None
@@ -175,8 +175,10 @@ class MaskEditor(QtGui.QMainWindow):
                 self.vb.removeItem(self.maskimg)
 
     def switch_boundary(self):
-        if hasattr(self,"vb") and not self.mask_bonudary is None:
+        print("boundary toggle")
+        if hasattr(self,"vb") and not self.mask_boundary is None:
             if self.boundarycheckbox.isChecked():
+                print("boundary toggle")
                 self.vb.addItem(self.mask_boundary)
             else:
                 self.vb.removeItem(self.mask_boundary)
@@ -208,7 +210,7 @@ class MaskEditor(QtGui.QMainWindow):
                     if self.maskDeleteEnabled() \
                         and event.modifiers() == QtCore.Qt.ControlModifier:
                         self.maskarray[self.t_index,self.maskarray[self.t_index,:,:]==ind]=0
-                        self.update_mask_boundary(self.t_index)
+                        #self.update_mask_boundary(self.t_index)
                         self.update_mask()
                     else:
                         print(ind)
@@ -221,19 +223,20 @@ class MaskEditor(QtGui.QMainWindow):
         new_ind=next(i for i,e in enumerate(sorted(existing_inds)+[None],1) if i!=e)
         print(existing_inds,new_ind)
         temporary_mask=np.zeros_like(self.maskarray[self.t_index],dtype=np.bool)
-        temporary_mask[self.roi[1][0]:self.roi[0][1],
+        temporary_mask[self.roi[0][0]:self.roi[0][1],
                        self.roi[1][0]:self.roi[1][1]][polyr,polyc]=True
         self.maskarray[self.t_index][np.logical_and(temporary_mask,self.maskarray[self.t_index]==0)]=new_ind
-        self.update_mask_boundary(self.t_index)
+        #self.update_mask_boundary(self.t_index)
         self.update_mask()
 
     def setViewRoi(self,roi=None):
         if roi is None:
             if not self.imgarray is None:
-                self.roi=((0,self.imgarray.shape[1]),
-                          (0,self.imgarray.shape[2]))
+                self.roi=[[0,self.imgarray.shape[1]],
+                          [0,self.imgarray.shape[2]]]
         else:
             self.roi=roi
+        print(self.roi)
 
     def convertPos(self,ix,iy):
         return ix+self.roi[0][0],iy+self.roi[1][0]
@@ -259,30 +262,31 @@ class MaskEditor(QtGui.QMainWindow):
         assert not self.imgarray is None
         assert all(np.array(self.imgarray.shape)==np.array(masks.shape))
         self.maskarray=masks
-        self.update_mask_boundary()
+        #self.update_mask_boundary()
 
-    def update_mask_boundary(self,t_index=None):
-        if self.maskarray_boundary is None:
-            self.maskarray_boundary=np.zeros_like(self.maskarray,dtype=np.bool)
-        if t_index is None:
-            self.maskarray_boundary=np.array([segmentation.find_boundaries(self.maskarray[ti],mode="inner")\
-                                          for ti in range(self.t_index_max+1)])
-        else:
-            self.maskarray_boundary[t_index]=segmentation.find_boundaries(self.maskarray[t_index],mode="inner")
+#    def update_mask_boundary(self,t_index=None):
+#        if self.maskarray_boundary is None:
+#            self.maskarray_boundary=np.zeros_like(self.maskarray,dtype=np.bool)
+#        if t_index is None:
+#            self.maskarray_boundary=np.array([segmentation.find_boundaries(self.maskarray[ti],mode="inner")\
+#                                          for ti in range(self.t_index_max+1)])
+#        else:
+#            self.maskarray_boundary[t_index]=segmentation.find_boundaries(self.maskarray[t_index],mode="inner")
 
     def clear_masks(self):
         if not self.imgarray is None:
             self.maskarray=np.zeros_like(self.imgarray,dtype=np.uint16)
             self.maskarray_boundary=np.zeros_like(self.maskarray,dtype=np.bool)
 
-    def update_image(self,adjust_hist=True):
+    def update_image(self,adjust_hist=False):
         if not self.imgarray is None:
-            self.img.setImage(self.imgarray[self.t_index,
-                                            self.roi[1][0]:self.roi[0][1],
-                                            self.roi[1][0]:self.roi[1][1]],
+            subarray=self.imgarray[self.t_index,
+                                   self.roi[0][0]:self.roi[0][1],
+                                   self.roi[1][0]:self.roi[1][1]]
+            self.img.setImage(subarray,
                               autoLevels=False)
             if adjust_hist:
-                self.hist.setLevels(self.imgarray.min(), self.imgarray.max())
+                self.hist.setLevels(subarray.min(), subarray.max())
     
     def get_mask_lut_applied(self,lut):
         return lut[self.maskarray[self.t_index,
@@ -298,12 +302,15 @@ class MaskEditor(QtGui.QMainWindow):
             #according to the source code,
             self.maskimg.setImage(self.get_mask_lut_applied(lut),autoDownsample=False)
             
-            self.mask_boundary.setImage(self.maskarray_boundary[self.t_index,
-                                                                self.roi[0][0]:self.roi[0][1],
-                                                                self.roi[1][0]:self.roi[1][1]])
+            self.mask_boundary.setImage(segmentation.find_boundaries(
+                self.maskarray[self.t_index,
+                               self.roi[0][0]:self.roi[0][1],
+                               self.roi[1][0]:self.roi[1][1]]),mode="inner")
             self.mask_boundary.setLookupTable([[0,0,0,0],[255,255,255,255]])
             self.mask_boundary.setLevels((0,1))
-            self.draw.clear(self.maskarray[self.t_index].shape)
+            self.draw.clear(self.maskarray[self.t_index,
+                                           self.roi[0][0]:self.roi[0][1],
+                                           self.roi[1][0]:self.roi[1][1]].shape)
     
     def keyPressEvent(self,event):
         if (event.modifiers() != QtCore.Qt.ControlModifier and
