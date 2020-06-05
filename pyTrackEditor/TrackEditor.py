@@ -1,15 +1,21 @@
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore, QtGui, QtWidgets
 from ast import literal_eval as make_tuple
-from .utils import get_testdata, tree_to_segments
-from . import MaskEditor
+from utils import get_testdata, tree_to_segments
+
+import MaskEditor
 import h5py
 import copy
 import pandas as pd
 import numpy as np
 from skimage import measure
 
-class PyTrackGUI(MaskEditor.MaskEditor):
+def _label_to_tuple(l):
+    return 
+def _tuple_to_label(t):
+    return 
+
+class TrackEditor(MaskEditor.MaskEditor):
     def __init__(self,roiSize=250,default_dir=None):
         self.show_all_masks=False
         self.total_tree=None
@@ -25,21 +31,21 @@ class PyTrackGUI(MaskEditor.MaskEditor):
         
     def initControls(self,layout):
         super().initControls(layout)
-        self.modifybutton=QtGui.QPushButton("Modify Track [M]",self)
+        self.modifybutton=QtGui.QPushButton("Modify Track (M)",self)
         layout.addRow(self.modifybutton)
         self.modifybutton.clicked.connect(self.modifyStart)
         shortcut = QtGui.QShortcut(QtGui.QKeySequence("M"), self)
         shortcut.activated.connect(self.modifyStart)
         shortcut.setEnabled(True)
         
-        self.terminatebutton=QtGui.QPushButton("Terminate Track [T]",self)
+        self.terminatebutton=QtGui.QPushButton("Terminate Track (T)",self)
         layout.addRow(self.terminatebutton)
         self.terminatebutton.clicked.connect(self.terminate)
         shortcut = QtGui.QShortcut(QtGui.QKeySequence("T"), self)
         shortcut.activated.connect(self.terminate)
         shortcut.setEnabled(True)
         
-        self.finalizebutton=QtGui.QPushButton("Finalize",self)
+        self.finalizebutton=QtGui.QPushButton("Finalize (F)",self)
         layout.addRow(self.finalizebutton)
         self.finalizebutton.clicked.connect(self.finalize)
         shortcut = QtGui.QShortcut(QtGui.QKeySequence("F"), self)

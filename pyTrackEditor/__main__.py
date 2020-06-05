@@ -5,8 +5,8 @@ Many of the features demonstrated here are already provided by the ImageView
 widget, but here we present a lower-level approach that provides finer control
 over the user interface.
 """
-from pyqtgraph.Qt import QtCore, QtGui
-from utils import get_testdata
+from pyqtgraph.Qt import QtGui
+from .utils import get_testdata
 
 from MaskEditor import MaskEditor
 
