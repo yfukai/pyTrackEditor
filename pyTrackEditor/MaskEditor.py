@@ -275,7 +275,7 @@ class MaskEditor(QtGui.QMainWindow):
             self.maskarray_boundary=np.zeros_like(self.maskarray,dtype=np.bool)
 
     def update_image(self,adjust_hist=False):
-        if not self.imgarray is None:
+        if not self.imgarray is None and not self.roi is None:
             subarray=self.imgarray[self.t_index,
                                    self.roi[0][0]:self.roi[0][1],
                                    self.roi[1][0]:self.roi[1][1]]
@@ -289,8 +289,8 @@ class MaskEditor(QtGui.QMainWindow):
                                   self.roi[0][0]:self.roi[0][1],
                                   self.roi[1][0]:self.roi[1][1]],:]
                 
-    def update_mask(self,modify_lut=lambda lut:None):
-        if not self.maskarray is None:
+    def update_mask(self,modify_lut=lambda lut:lut):
+        if not self.maskarray is None and not self.roi is None:
             self.mask_lut[1:,3]=self.mask_alpha
             lut=self.mask_lut.copy()
             lut=modify_lut(lut)

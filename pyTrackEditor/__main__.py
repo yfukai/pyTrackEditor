@@ -6,15 +6,16 @@ widget, but here we present a lower-level approach that provides finer control
 over the user interface.
 """
 from pyqtgraph.Qt import QtGui
-from .utils import get_testdata
+if not __package__ is None:
+    from .utils import get_testdata
+    from .MaskEditor import MaskEditor
+else:
+    import sys
+    import os
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
+    from pyTrackEditor.utils import get_testdata
+    from pyTrackEditor.MaskEditor import MaskEditor
 
-from MaskEditor import MaskEditor
-
-class PyTrackGUI(MaskEditor):
-    def __init__(self):
-        super(PyTrackGUI, self).__init__()
-
-## Start Qt event loop unless running in interactive mode or using pyside.
 if __name__ == '__main__':
     import sys
     app = QtGui.QApplication(sys.argv)
