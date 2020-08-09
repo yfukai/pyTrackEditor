@@ -2,42 +2,41 @@ import os
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore, QtGui
 import numpy as np
-from . import pgwidgets as pgw
+from skimage import draw, io, segmentation
 from matplotlib import pyplot as plt
-from .utils import make_random_colormap,get_testdata
-from skimage import draw,io,segmentation
 
-
+from . import pgwidgets as pgw
+from .utils import make_random_colormap, get_testdata
 
 class MaskEditor(QtGui.QMainWindow):
     def __init__(self, image=None):
         super(MaskEditor, self).__init__()
 
-        self.cp_path = os.path.dirname(os.path.realpath(__file__))
-        self.mask_max=100000
-        self.colormap,self.mask_lut=make_random_colormap(plt.cm.gist_ncar,self.mask_max,128)
-        self.t_index=0
-        self.mask_alpha=100
-        self.imgarray=None
-        self.maskarray=None
-        self.maskarray_boundary=None
+#        self.cp_path = os.path.dirname(os.path.realpath(__file__))
+        self.mask_max = 100000
+        self.colormap, self.mask_lut = make_random_colormap(plt.cm.gist_ncar, self.mask_max, 128)
+        self.t_index = 0
+        self.mask_alpha = 100
+        self.imgarray = None
+        self.maskarray = None
+        self.maskarray_boundary = None
 
-        self.img=None
-        self.maskimg=None
-        self.mask_boundary=None
-        self.draw=None
-        self.vb=None
-        self.tslider=None
-        
-        self.initUI()
+        self.img = None
+        self.maskimg = None
+        self.mask_boundary = None
+        self.draw = None
+        self.vb = None
+        self.tslider = None
+
+        self.__initUI()
         self.update_image()
         self.update_mask()
         self.win.show()
         self.show()
 
-    def initUI(self):
+    def __initUI(self):
         self.setGeometry(50, 50, 1200, 1000)
-        self.setWindowTitle("maskEdit")
+        self.setWindowTitle("maskEditor")
         self.cwidget = QtGui.QWidget(self)
         self.setCentralWidget(self.cwidget)
         self.l0 = QtGui.QHBoxLayout()
@@ -45,30 +44,30 @@ class MaskEditor(QtGui.QMainWindow):
 
         self.lleft = QtGui.QFormLayout()
         self.lright = QtGui.QVBoxLayout()
-        self.l0.addLayout(self.lleft,stretch=0)
-        self.l0.addLayout(self.lright,stretch=1)
+        self.l0.addLayout(self.lleft, stretch=0)
+        self.l0.addLayout(self.lright, stretch=1)
 
         self.initControls(self.lleft)
         self.initImageItems(self.lright)
 
-        self.tslider=QtGui.QSlider(QtCore.Qt.Horizontal,self)
+        self.tslider = QtGui.QSlider(QtCore.Qt.Horizontal,self)
         self.lright.addWidget(self.tslider)
         self.tslider.valueChanged.connect(self.change_t)
 
         self.initMenu()
 
     def initControls(self,layout):
-        self.alphaslider=QtGui.QSlider(QtCore.Qt.Horizontal,self)
+        self.alphaslider = QtGui.QSlider(QtCore.Qt.Horizontal,self)
         layout.addRow(QtGui.QLabel("mask alpha"),self.alphaslider)
         self.alphaslider.valueChanged.connect(self.change_alpha)
         self.alphaslider.setValue(self.mask_alpha)
         
-        self.maskcheckbox=QtGui.QCheckBox()
+        self.maskcheckbox = QtGui.QCheckBox()
         layout.addRow(QtGui.QLabel("display mask"),self.maskcheckbox)
         self.maskcheckbox.stateChanged.connect(self.switch_mask)
         self.maskcheckbox.setChecked(True)
         
-        self.boundarycheckbox=QtGui.QCheckBox()
+        self.boundarycheckbox = QtGui.QCheckBox()
         layout.addRow(QtGui.QLabel("display boundary"),self.boundarycheckbox)
         self.boundarycheckbox.stateChanged.connect(self.switch_boundary)
         self.boundarycheckbox.setChecked(True)
@@ -104,22 +103,22 @@ class MaskEditor(QtGui.QMainWindow):
         self.hist.setImageItem(self.img)
 
     def initMenu(self):
-        openImageAction=QtGui.QAction("&Open Image",self)
+        openImageAction = QtGui.QAction("&Open Image",self)
         openImageAction.setShortcut("Ctrl+O")
         openImageAction.setStatusTip("Open image (T x X x Y tiff)")
         openImageAction.triggered.connect(self.openImage)
 
-        openMaskAction=QtGui.QAction("&Open Mask",self)
+        openMaskAction = QtGui.QAction("&Open Mask",self)
         openMaskAction.setShortcut("Ctrl+Shift+O")
         openMaskAction.setStatusTip("Open mask (T x X x Y tiff)")
         openMaskAction.triggered.connect(self.openMask)
 
-        saveMaskAction=QtGui.QAction("&Save Mask",self)
+        saveMaskAction = QtGui.QAction("&Save Mask",self)
         saveMaskAction.setShortcut("Ctrl+S")
         saveMaskAction.setStatusTip("Save mask to TIFF")
         saveMaskAction.triggered.connect(self.saveMask)
 
-        menubar=self.menuBar()
+        menubar = self.menuBar()
         fileMenu = menubar.addMenu('&File')
         fileMenu.addAction(openImageAction)
         fileMenu.addAction(openMaskAction)
@@ -319,7 +318,7 @@ class MaskEditor(QtGui.QMainWindow):
                     self.update_image() 
                     self.update_mask()
             elif event.key() == QtCore.Qt.Key_Right:
-                if self.t_index<self.t_index_max:
+                if self.t_index < self.t_index_max:
                     self.t_index=self.t_index+1
                     self.tslider.setValue(self.t_index)
                     self.update_image()

@@ -48,3 +48,4 @@ def tree_to_segment_tree(tree,node):
     segment_tree=treelib.Tree()
     create_nodes(segment_tree,[segments],None)
     return segment_tree
+    
