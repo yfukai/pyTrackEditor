@@ -2,11 +2,13 @@ import os
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore, QtGui
 import numpy as np
-from . import pgwidgets as pgw
+from skimage import draw, io, segmentation
 from matplotlib import pyplot as plt
 from .utils import make_random_colormap, get_testdata
 from skimage import draw, io, segmentation
 
+from . import pgwidgets as pgw
+from .utils import make_random_colormap, get_testdata
 
 class MaskEditor(QtGui.QMainWindow):
     def __init__(self):
