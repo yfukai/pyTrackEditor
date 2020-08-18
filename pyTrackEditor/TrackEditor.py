@@ -1,9 +1,9 @@
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore, QtGui, QtWidgets
 from ast import literal_eval as make_tuple
-from utils import get_testdata, tree_to_segments
+from .utils import get_testdata, tree_to_segments
 
-import MaskEditor
+from . import MaskEditor
 import h5py
 import copy
 import pandas as pd
@@ -30,7 +30,7 @@ class TrackEditor(MaskEditor.MaskEditor):
         self.roiSize=roiSize
         
     def initControls(self,layout):
-        super().initControls(layout)
+        super()._initControls(layout)
         self.modifybutton=QtGui.QPushButton("Modify Track (M)",self)
         layout.addRow(self.modifybutton)
         self.modifybutton.clicked.connect(self.modifyStart)
@@ -69,7 +69,7 @@ class TrackEditor(MaskEditor.MaskEditor):
             print("modification not possible")
             return
         self.state="modify"
-        self.tslider.setEnabled(False)
+        self._t_slider.setEnabled(False)
         self.candidates=set()
         self.draw.drawEnabled=True
         
@@ -99,7 +99,7 @@ class TrackEditor(MaskEditor.MaskEditor):
         else:
             print("cell already tracked")
         self.state="visualize"
-        self.tslider.setEnabled(True)
+        self._t_slider.setEnabled(True)
         self.draw.drawEnabled=False
         self.update_image()
         self.update_mask()
@@ -142,7 +142,7 @@ class TrackEditor(MaskEditor.MaskEditor):
         
         if event.modifiers() == QtCore.Qt.ShiftModifier:
             if event.key() == QtCore.Qt.Key_Right:
-                shift=min(self.roi[0][1]+10,self.imgarray.shape[1])-self.roi[0][1]
+                shift=min(self.roi[0][1]+10,self._imgarray.shape[1])-self.roi[0][1]
                 self.roi[0][0]+=shift
                 self.roi[0][1]+=shift
                 super().update_image()
@@ -160,7 +160,7 @@ class TrackEditor(MaskEditor.MaskEditor):
                 super().update_image()
                 self.update_mask()
             if event.key() == QtCore.Qt.Key_Down:
-                shift=min(self.roi[1][1]+10,self.imgarray.shape[2])-self.roi[1][1]
+                shift=min(self.roi[1][1]+10,self._imgarray.shape[2])-self.roi[1][1]
                 self.roi[1][0]+=shift
                 self.roi[1][1]+=shift
                 super().update_image()
@@ -188,7 +188,7 @@ class TrackEditor(MaskEditor.MaskEditor):
         if not self.maskarray is None:
             if not self.show_all_masks:
                 visible=self.get_visible_index(self.t_index)
-                in_index=np.isin(np.arange(self.mask_max),visible)
+                in_index=np.isin(np.arange(self._mask_max),visible)
                 def modify_lut(lut):
                     lut[np.logical_not(in_index),3]=0
                     if "frame" in self.drawn_segments.columns:
@@ -251,15 +251,15 @@ class TrackEditor(MaskEditor.MaskEditor):
         t=make_tuple(node_id)[0]
         ind=make_tuple(node_id)[1]
         self.t_index=t
-        self.tslider.setValue(t)
+        self._t_slider.setValue(t)
         ind_mask=self.maskarray[self.t_index]==ind
         if np.any(ind_mask):
             M=measure.moments(ind_mask)
             pos=(int(M[1,0]/M[0,0]), int(M[0,1]/M[0,0]))
             self.setViewRoi([[max(0,pos[0]-self.roiSize),
-                              min(self.imgarray.shape[1],pos[0]+self.roiSize)],
+                              min(self._imgarray.shape[1],pos[0]+self.roiSize)],
                              [max(0,pos[1]-self.roiSize),
-                              min(self.imgarray.shape[2],pos[1]+self.roiSize)]])
+                              min(self._imgarray.shape[2],pos[1]+self.roiSize)]])
 
         self.update_image()
         self.update_mask()
